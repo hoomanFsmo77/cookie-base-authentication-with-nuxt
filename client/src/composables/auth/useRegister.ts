@@ -5,7 +5,7 @@ import { useToast } from "vue-toastification";
 export const useRegister=()=>{
     const fetchFlag=useState<boolean>('registerFlag',()=>false)
     const toast = useToast();
-    const {endpoints}=useAppConfig()
+   const {public:{endpoints,cookieName}}=useRuntimeConfig()
     const errors=ref<string[]>([])
     const userData=useState<Register_Response['user']|null>('userInfo',()=>null)
     const userInformation=reactive<Register_Information>({
@@ -20,16 +20,25 @@ export const useRegister=()=>{
     const registerHandler = async () => {
         fetchFlag.value=true
         try {
-            const user:Register_Response['user']=await $fetch(endpoints.register,{
+            await $fetch(endpoints.csrf,{
+                credentials:'include'
+            })
+            const xsrf=useCookie(cookieName)
+            const data:Register_Response=await $fetch(endpoints.register,{
                 method:'POST',
-                body:userInformation
+                body:userInformation,
+                credentials:'include',
+                headers:{
+                    'Accept':'application/json',
+                    'X-XSRF-TOKEN':xsrf.value as string
+                }
             })
             toast.success('You registered!')
             errors.value=[]
-            userData.value=user
+            userData.value=data.user
             return navigateTo({name:'index'})
         }catch (err:any) {
-            errors.value=Object.values(err.data.data).flat() as string[]
+            errors.value=Object.values(err.data).flat() as string[]
         }finally {
             fetchFlag.value=false
         }
