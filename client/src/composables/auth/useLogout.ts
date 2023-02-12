@@ -2,15 +2,20 @@ import {Login_Response} from "~/composables/useTypes";
 import {useToast} from "vue-toastification";
 
 export const useLogout=()=>{
-    const {endpoints}=useAppConfig()
+    const {public:{cookieName,endpoints}}=useRuntimeConfig()
     const userData=useState<Login_Response['user']|null>('userInfo')
     const toast=useToast()
 
     const logoutHandler = async () => {
-        const headers:any=useRequestHeaders(['cookie'])
         try {
+            const xsrf_token=useCookie(cookieName)
             const data:Login_Response['user']=await $fetch(endpoints.logout,{
-                method:'POST',headers
+                method:'POST',
+                credentials:'include',
+                headers:{
+                    'Accept':'application/json',
+                    'X-XSRF-TOKEN':xsrf_token.value as string
+                }
             })
             userData.value=null
             toast.warning('You are logged out!')
